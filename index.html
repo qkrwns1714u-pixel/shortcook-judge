@@ -36,7 +36,7 @@ h1{margin:0;font-size:19px;font-weight:500;letter-spacing:-.2px}
 .row.done .c-id{box-shadow:inset 3px 0 0 var(--muted)}
 .c-id{display:grid;gap:2px;align-content:start;font-size:12.5px;color:var(--muted)}
 .c-id .no{font-family:var(--f-num);font-size:13px;color:var(--fg)}
-.c-id .menu{color:var(--fg);font-size:13px;line-height:1.35}
+.c-id .menu{color:var(--fg);font-size:13px;line-height:1.35;word-break:keep-all}
 .c-photo{background:var(--photobg)}.c-clip{background:var(--clipbg)}
 .strip{display:grid;gap:4px;grid-template-columns:repeat(var(--n),minmax(0,1fr))}
 figure{margin:0;display:grid;gap:2px;min-width:0}
@@ -74,8 +74,8 @@ td{padding:3px 0;vertical-align:middle}td.n{font-family:var(--f-num);text-align:
 .lb .ctl button{font:inherit;font-size:13px;color:#fff;background:transparent;border:1px solid #888;border-radius:4px;padding:3px 10px;cursor:pointer}
 .lb .ctl button.on{background:#fff;color:#000}
 button:focus-visible,summary:focus-visible,img:focus-visible{outline:2px solid var(--photo);outline-offset:2px}
-@media (max-width:1060px){.app{grid-template-columns:minmax(0,1fr)}aside{position:static;grid-row:3;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}}
-@media (max-width:720px){.thead{display:none}.row{grid-template-columns:minmax(0,1fr);padding:8px 0}.row>div{padding:6px 0}.c-photo,.c-clip{padding:6px!important}.c-id{grid-template-columns:auto auto 1fr;gap:8px;align-items:baseline}figure img{height:150px}.vb button{padding:8px 0}}
+@media (max-width:1060px){.app{grid-template-columns:minmax(0,1fr)}aside{position:static;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}}
+@media (max-width:720px){.thead{display:none}.row{grid-template-columns:minmax(0,1fr);padding:8px 0}.row>div{padding:6px 0}.c-photo,.c-clip{padding:6px!important}.c-id{grid-template-columns:auto 1fr;gap:8px;align-items:baseline}.row.done .c-id{box-shadow:none}figure img{height:150px}.vb button{padding:8px 0}}
 </style>
 </head>
 <body>
@@ -111,8 +111,8 @@ const sev={},vis={},opened={};
 function chips(label,opts,store,id){const q=$("div","q");q.append($("span",null,label));const box=$("div","kinds");const bs={};Object.entries(opts).forEach(([k,l])=>{const b=$("button",null,l);b.type="button";b.setAttribute("aria-pressed","false");b.onclick=()=>{if(opened[id])return;store[id]=store[id]===k?null:k;Object.entries(bs).forEach(([kk,bb])=>bb.setAttribute("aria-pressed",String(store[id]===kk)));};box.append(b);bs[k]=b;});q.append(box);return q;}
 ORDER.forEach((it,i)=>{
   const r=$("div","row");r.id="cut-"+it.id;
-  const c0=$("div","c-id");c0.append($("span","no",String(i+1).padStart(2,"0")),$("span",null,"컷 "+it.cut),$("span","menu",it.menu||""));
-  const c1=$("div","c-photo");const s1=$("div","strip");s1.style.setProperty("--n",it.input?2:1);s1.append(fig(it.photo,"원본"));if(it.input)s1.append(fig(it.input,it.photo_source==="crop"?"엔진 입력 · 자른 사진":"엔진 입력 · AI 각도 변형"));c1.append(s1);
+  const c0=$("div","c-id");c0.append($("span","no","컷 "+it.cut),$("span","menu",it.menu||""));
+  const c1=$("div","c-photo");const s1=$("div","strip");s1.style.setProperty("--n",2);s1.append(fig(it.photo,"원본"));if(it.input)s1.append(fig(it.input,it.photo_source==="crop"?"엔진 입력 · 자른 사진":"엔진 입력 · AI 각도 변형"));c1.append(s1);
   const c2=$("div","c-clip");const s2=$("div","strip");s2.style.setProperty("--n",3);["처음","중간","끝"].forEach((n,k)=>s2.append(fig(it.frames[k],n)));
   const pl=$("button","play",`영상 재생 · ${it.sec}초`);pl.type="button";pl.onclick=()=>playClip(it);
   c2.append(s2,$("div","motion","지시 동작 · "+(it.motion||"")),pl);
@@ -129,7 +129,7 @@ function show(id){const it=ITEMS.find(x=>x.id===id);const e=els[id];const o=e.ou
   const d=$("details","why");d.append($("summary",null,"이유와 판정 모델 메모"));if(it.human_why)d.append($("p",null,"제 정답: "+it.human_why));d.append($("p",null,"판정 모델: "+it.judge_note));const pr=$("p","mono",it.prompt);d.append(pr);o.append(d);o.hidden=false;}
 function pick(id,k){if(state[id])return;state[id]=k;const e=els[id];Object.entries(e.bt).forEach(([kk,b])=>{b.setAttribute("aria-pressed",String(kk===k));b.disabled=true;});e.r.classList.add("done");if(k==="defect"){e.kd.hidden=false;e.kd.querySelector(".reveal").focus();}else{opened[id]=true;show(id);}tally();apply();}
 function tally(){const ids=Object.keys(state).filter(i=>opened[i]);const it=i=>ITEMS.find(x=>x.id===i);
-  document.getElementById("cnt").textContent=ids.length;document.getElementById("pg").style.width=100*ids.length/ITEMS.length+"%";
+  const picked=Object.keys(state).length;document.getElementById("cnt").textContent=picked;document.getElementById("pg").style.width=100*picked/ITEMS.length+"%";
   const dec=ids.filter(i=>state[i]!=="ambiguous");const m1=dec.filter(i=>state[i]===it(i).human).length,m2=dec.filter(i=>state[i]===jk(it(i))).length;
   const set=(a,b,m)=>{document.getElementById(a).textContent=dec.length?m+"/"+dec.length:"–";document.getElementById(b).style.width=dec.length?100*m/dec.length+"%":"0";};set("a1","b1",m1);set("a2","b2",m2);
   const c={hit:0,miss:0,fa:0};ids.forEach(i=>{const x=it(i);if(jk(x)===x.human)c.hit++;else if(x.human==="defect")c.miss++;else c.fa++;});
