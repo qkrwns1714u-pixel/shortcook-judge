@@ -3,146 +3,489 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="숏쿡 생성 영상 컷 9개를 직접 판정하고, 정답·판정 모델 결과와 비교해 보는 화면">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>숏쿡 컷 판정 화면</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="음식점 홍보 영상에서 AI가 만든 컷 9개를 먼저 판정하면 박준혁 정답과 Gemini 판정이 열립니다.">
+<title>숏쿡 컷 판정 체험판</title>
 <style>
-/* Layout: an annotation table in the manner of a model-comparison tool. One row per cut; columns are the owner's photo (blue), the clip's frames (amber) and the verdict. A summary rail on the right tallies agreement as small bars. Stacks to one column on phones. */
-:root{--bg:#ffffff;--rail:#f6f7f8;--fg:#202124;--muted:#5f6368;--line:#dadce0;--photo:#1a64c8;--photobg:#e8f0fd;--clip:#b26a00;--clipbg:#fdf1de;--bad:#c5221f;--ok:#137333;--amb:#9a6700;--sel:#f1f3f4;--media:#e9ebee;
---f-body:"Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;--f-num:"Roboto Mono",ui-monospace,Menlo,monospace}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1c1e;--rail:#232427;--fg:#e8eaed;--muted:#9aa0a6;--line:#3c4043;--photo:#8ab4f8;--photobg:#1f2a3b;--clip:#f2b04f;--clipbg:#33291a;--bad:#f28b82;--ok:#81c995;--amb:#fdd663;--sel:#2b2c2f;--media:#2b2c2f;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#1b1c1e;--rail:#232427;--fg:#e8eaed;--muted:#9aa0a6;--line:#3c4043;--photo:#8ab4f8;--photobg:#1f2a3b;--clip:#f2b04f;--clipbg:#33291a;--bad:#f28b82;--ok:#81c995;--amb:#fdd663;--sel:#2b2c2f;--media:#2b2c2f;color-scheme:dark}
+:root{--bg:#ffffff;--fg:#202124;--muted:#5f6368;--line:#dadce0;--sel:#f1f3f4;--media:#e9ebee;--panel:#f6f7f8;
+--me:#1a64c8;--jun:#202124;--juntx:#ffffff;--gem:#7b3fb0;--bad:#c5221f;--ok:#137333;--amb:#9a6700;
+--f:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;--mono:ui-monospace,Menlo,Consolas,monospace;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1c1e;--fg:#e8eaed;--muted:#9aa0a6;--line:#3c4043;--sel:#2b2c2f;--media:#2b2c2f;--panel:#232427;
+--me:#8ab4f8;--jun:#e8eaed;--juntx:#1b1c1e;--gem:#c58af9;--bad:#f28b82;--ok:#81c995;--amb:#fdd663;color-scheme:dark}}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.5;word-break:keep-all;overflow-wrap:anywhere}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
-.app{max-width:1360px;margin:0 auto;padding-block:12px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:0 20px;align-items:start}
-.top{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:10px}
-h1{margin:0;font-size:19px;font-weight:500;letter-spacing:-.2px}
-.sub{color:var(--muted);font-size:13px}
-.intro{grid-column:1/-1;margin:0 0 10px;color:var(--muted);font-size:13.5px;max-width:92ch}
-.intro b{color:var(--fg);font-weight:500}
-.filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:13px;color:var(--muted)}
-.filters button{font:inherit;font-size:12.5px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:2px 10px;cursor:pointer}
-.filters button.on{background:var(--sel);border-color:var(--muted)}
-.main{min-width:0}
-.thead,.row{display:grid;grid-template-columns:72px minmax(0,1.1fr) minmax(0,2.1fr) 190px;min-width:0}
-.thead{position:sticky;top:env(safe-area-inset-top,0px);z-index:4;font-size:12.5px;font-weight:500}
-.thead>div{padding:6px 8px;background:var(--sel);border-bottom:1px solid var(--line)}
-.thead .hp{background:var(--photo);color:var(--bg)}.thead .hc{background:var(--clip);color:var(--bg)}
-.row{border-bottom:1px solid var(--line)}
-.row>div{padding:8px;min-width:0}
-.row.done .c-id{box-shadow:inset 3px 0 0 var(--muted)}
-.c-id{display:grid;gap:2px;align-content:start;font-size:12.5px;color:var(--muted)}
-.c-id .no{font-family:var(--f-num);font-size:13px;color:var(--fg)}
-.c-id .menu{color:var(--fg);font-size:13px;line-height:1.35;word-break:keep-all}
-.c-photo{background:var(--photobg)}.c-clip{background:var(--clipbg)}
-.strip{display:grid;gap:4px;grid-template-columns:repeat(var(--n),minmax(0,1fr))}
-figure{margin:0;display:grid;gap:2px;min-width:0}
-figure img{width:100%;height:170px;object-fit:contain;background:transparent;display:block;cursor:zoom-in}.noinput{height:170px;display:grid;place-items:center;border:1px dashed var(--line);color:var(--muted);font-size:12px;text-align:center;padding:6px;word-break:keep-all}
-figcaption{font-size:12px;color:var(--muted);text-align:center}
-.motion{margin-top:6px;font-size:12px;color:var(--muted)}
-.play{margin-top:6px;font:inherit;font-size:12px;color:var(--clip);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
-.c-v{display:grid;gap:6px;align-content:start}
-.vb{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
-.vb button,.kinds button{font:inherit;font-size:13px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:5px 0;cursor:pointer}
-.vb button[aria-pressed="true"]{border-color:var(--fg);background:var(--sel);font-weight:700}
-.vb .k-defect[aria-pressed="true"]{color:var(--bad)}.vb .k-no_defect[aria-pressed="true"]{color:var(--ok)}.vb .k-ambiguous[aria-pressed="true"]{color:var(--amb)}
-.follow{display:grid;gap:5px;font-size:12px;color:var(--muted)}.follow .q{display:grid;gap:3px}.reveal{font:inherit;font-size:13px;color:var(--bg);background:var(--fg);border:0;border-radius:4px;padding:5px 0;cursor:pointer}.vb button:disabled{cursor:default}.vb button:disabled:not([aria-pressed="true"]){opacity:.45}.kinds{display:flex;flex-wrap:wrap;gap:4px}.kinds button{font-size:12px;padding:2px 7px}
-.kinds button[aria-pressed="true"]{border-color:var(--bad);color:var(--bad)}
-.res{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;font-size:12.5px}
-.res dt{color:var(--muted)}.res dd{margin:0;font-weight:700}
-.d{color:var(--bad)}.p{color:var(--ok)}.a{color:var(--amb)}
-.flag{font-size:12px;font-weight:500}
-details.why{font-size:12.5px}details.why summary{cursor:pointer;color:var(--muted)}details.why p{margin:4px 0 0}
-.mono{font-family:var(--f-num);font-size:11.5px;color:var(--muted);overflow-wrap:anywhere}
-aside{position:sticky;top:calc(env(safe-area-inset-top,0px) + 8px);display:grid;gap:10px;min-width:0}
-.panel{background:var(--rail);border:1px solid var(--line);border-radius:6px;padding:10px 12px;display:grid;gap:6px}
-.panel h2{margin:0;font-size:13.5px;font-weight:500}
-.panel p{margin:0;font-size:12.5px;color:var(--muted)}
-.big{font-family:var(--f-num);font-size:20px}
-.meter{height:6px;background:var(--line);border-radius:3px;overflow:hidden}.meter i{display:block;height:100%;width:0;background:var(--fg)}
-table{border-collapse:collapse;width:100%;font-size:12.5px}
-td{padding:3px 0;vertical-align:middle}td.n{font-family:var(--f-num);text-align:right;width:3.2em;padding-right:6px}
-.hb{height:9px;background:var(--line);border-radius:1px;overflow:hidden}.hb i{display:block;height:100%}
-.legend{font-size:12px;color:var(--muted)}
-.rules ul{margin:0;padding-left:16px;font-size:12.5px;display:grid;gap:2px}
-.lb{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.86);display:grid;place-items:center;gap:8px;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
-.lb img,.lb video{max-width:100%;max-height:82vh;object-fit:contain;background:#000}
-.lb .ctl{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
-.lb .ctl button{font:inherit;font-size:13px;color:#fff;background:transparent;border:1px solid #888;border-radius:4px;padding:3px 10px;cursor:pointer}
-.lb .ctl button.on{background:#fff;color:#000}
-button:focus-visible,summary:focus-visible,img:focus-visible{outline:2px solid var(--photo);outline-offset:2px}
-@media (max-width:1060px){.app{grid-template-columns:minmax(0,1fr)}aside{position:static;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}}
-@media (max-width:720px){.thead{display:none}.row{grid-template-columns:minmax(0,1fr);padding:8px 0}.row>div{padding:6px 0}.c-photo,.c-clip{padding:6px!important}.c-id{grid-template-columns:auto 1fr;gap:8px;align-items:baseline}.row.done .c-id{box-shadow:none}figure img{height:150px}.vb button{padding:8px 0}}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f);font-size:15px;line-height:1.5;word-break:keep-all;overflow-wrap:anywhere}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,summary:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--me);outline-offset:2px}
+h1,h2,h3,p{margin:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)}
+.t-ok{color:var(--ok)}.t-bad{color:var(--bad)}.t-amb{color:var(--amb)}
+.chip{display:inline-block;border:1.5px solid currentColor;border-radius:14px;padding:0 10px;font-size:13px;line-height:22px;font-weight:700;white-space:nowrap}
+.chip.me{color:var(--me)}.chip.gem{color:var(--gem)}
+.chip.jun{background:var(--jun);border-color:var(--jun);color:var(--juntx)}
+.ic{display:inline-block;width:1.2em;text-align:center}
+/* 첫 화면 */
+.intro{max-width:560px;margin:0 auto;padding:max(28px,env(safe-area-inset-top)) 16px 20px;display:grid;gap:16px}
+.intro h1{font-size:24px;font-weight:700;letter-spacing:-.3px}
+.intro .lead{font-size:15px}
+.steps{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:6px;align-items:center;font-size:13px;line-height:1.35}
+.steps .s{display:grid;gap:4px;justify-items:center;text-align:center;border:1px solid var(--line);border-radius:8px;padding:8px 4px;min-width:0}
+.steps .n{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--fg);color:var(--bg);font-size:12px;font-weight:700}
+.legend{display:grid;gap:6px;font-size:13.5px}
+.legend div{display:flex;gap:8px;align-items:baseline}
+.legend .chip{flex:none;min-width:94px;text-align:center}
+.go{min-height:56px;font-size:18px;font-weight:700;border:0;border-radius:8px;background:var(--fg);color:var(--bg)}
+.link{min-height:44px;background:none;border:0;text-decoration:underline;text-underline-offset:3px;font-size:15px;color:var(--fg)}
+.small{font-size:12px;color:var(--muted)}
+/* 컷 화면 */
+.cut{min-height:100vh;min-height:100svh;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:6;height:48px;display:flex;align-items:center;gap:8px;padding:0 max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));background:var(--bg);border-bottom:1px solid var(--line)}
+.tb{min-height:44px;min-width:44px;padding:0 8px;background:none;border:0;font-size:14px;white-space:nowrap}
+.tb:hover{background:var(--sel)}
+.spacer{min-width:44px;display:inline-block}
+.cells{flex:1;display:flex;gap:4px;max-width:360px;margin:0 auto}
+.cell{flex:1;min-width:0;height:44px;padding:0;background:none;border:0;display:grid;place-items:center}
+.cell i{display:block;width:100%;height:14px;border:1.5px solid var(--muted);border-radius:3px}
+.cell.done i{background:var(--fg);border-color:var(--fg)}
+.cell.skip i{border-style:dashed}
+.cell.cur i{outline:2px solid var(--me);outline-offset:2px}
+.cnt{font-size:13px;color:var(--muted);min-width:2.6em}
+.menu{position:absolute;right:12px;top:48px;z-index:9;min-width:160px;background:var(--bg);border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.25);display:grid;padding:4px}
+.menu button{min-height:44px;text-align:left;background:none;border:0;padding:0 12px;border-radius:6px}
+.menu button:hover{background:var(--sel)}
+.cmain{flex:1;width:100%;max-width:1120px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-right)) 16px max(16px,env(safe-area-inset-left));display:grid;gap:12px;align-content:start}
+.ctitle h2{font-size:16px;font-weight:700}
+.ctitle .mo{font-size:13px;color:var(--muted)}
+.rv{display:inline-block;margin-left:8px;border:1px solid var(--muted);border-radius:4px;padding:0 6px;font-size:12px;font-weight:500;color:var(--muted);vertical-align:1px}
+.media{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.sh{font-size:13px;font-weight:700;margin-bottom:4px}
+.stage{position:relative;height:min(34svh,340px);background:var(--media);border-radius:6px;overflow:hidden}
+.stage img,.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;cursor:zoom-in}
+.stage .fl{pointer-events:none}
+.zoom{position:absolute;right:6px;top:6px;z-index:2;min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font-size:12.5px}
+.playov{position:absolute;inset:0;z-index:1;margin:auto;width:64px;height:64px;border-radius:50%;border:2px solid var(--fg);background:var(--bg);font-size:24px}
+.cap{min-height:22px;font-size:12.5px;color:var(--muted);margin-top:4px}
+.thumbs{display:flex;gap:6px;margin-top:6px}
+.th{flex:1 1 0;min-width:0;max-width:84px;padding:2px;border:2px solid var(--line);border-radius:6px;background:var(--bg);display:grid;gap:1px;justify-items:center}
+.th img{width:100%;height:54px;object-fit:cover;border-radius:3px;display:block;background:var(--media)}
+.th span{font-size:11px;line-height:1.3;white-space:nowrap;max-width:100%;overflow:hidden}
+.th[aria-pressed="true"]{border-color:var(--fg);font-weight:700}
+.ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.ctl button,.spdg button{min-height:44px;min-width:44px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font-size:13.5px}
+.spdg{display:flex;gap:4px}
+.spdg button[aria-pressed="true"]{border:2px solid var(--fg);font-weight:700;background:var(--sel)}
+.track{flex:1 1 80px;min-width:60px;height:8px;border-radius:4px;background:var(--line);position:relative;overflow:hidden;border-right:3px solid var(--fg)}
+.track i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--muted)}
+.dur{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.vmsg{font-size:13px;color:var(--bad);margin-top:4px}
+/* 아래 막대 */
+.bar{position:sticky;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--line);padding:10px max(16px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+.barin{max-width:900px;margin:0 auto;display:grid;gap:8px}
+.q{font-size:14px;font-weight:500}
+.drow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dec{min-height:56px;border:2px solid var(--fg);border-radius:8px;background:var(--bg);font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px}
+.dec:hover,.dec2:hover{background:var(--sel)}
+.kb{font-family:var(--mono);font-size:12px;font-weight:500;border:1px solid var(--muted);border-radius:4px;padding:0 6px;color:var(--muted)}
+.d2{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+.dec2{min-height:44px;min-width:160px;border:1.5px solid var(--muted);border-radius:8px;background:var(--bg);font-size:15px;display:flex;align-items:center;justify-content:center;gap:6px}
+.kinds{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.kinds .kl{font-size:12.5px;color:var(--muted);margin-right:4px}
+.kinds button{min-height:36px;padding:0 10px;border:1px solid var(--muted);border-radius:18px;background:var(--bg);font-size:12.5px}
+.kinds button:hover{background:var(--sel)}
+.ktog{min-height:44px;background:none;border:0;font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.rbar{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}
+.next{min-height:56px;min-width:180px;padding:0 20px;border:0;border-radius:8px;background:var(--fg);color:var(--bg);font-size:18px;font-weight:700}
+.headline{font-weight:700;font-size:14.5px}
+.rel3{display:grid;gap:4px;max-width:560px}
+.rr{display:grid;grid-template-columns:104px minmax(180px,max-content) minmax(0,1fr);gap:2px 12px;align-items:center;font-size:14px}
+.rr .sub{grid-column:2/4;font-size:12.5px;color:var(--muted)}
+.rr .rel{font-size:13px;font-weight:700}
+.rr .rel.n{font-weight:400;color:var(--muted)}
+.val small{color:var(--muted);font-size:12.5px}
+.cline{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13px;align-items:center}
+.wd{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:13px;color:var(--muted)}
+.wd button{min-height:44px;padding:0 10px;border:1px solid var(--muted);border-radius:6px;background:var(--bg);font-size:13px}
+.why{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.why.one{grid-template-columns:1fr}
+.box{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--panel)}
+.box h3{font-size:13px;font-weight:700;margin-bottom:4px;color:var(--muted)}
+.box p{font-size:14.5px}
+.ban{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:13.5px;background:var(--panel)}
+.ban button{min-height:44px;padding:0 12px;border:1px solid var(--fg);border-radius:6px;background:var(--bg);font-weight:700}
+details.pr summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:14px}
+details.pr pre{margin:0;white-space:pre-wrap;font-family:var(--mono);font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:10px;background:var(--panel)}
+/* 요약 */
+.sum{max-width:1000px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 32px max(16px,env(safe-area-inset-left));display:grid;gap:14px}
+.sumh{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.sumh h1{font-size:22px;font-weight:700}
+.sumh button{min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.scope{font-size:13px;color:var(--muted)}
+.mets{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.met{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:grid;gap:4px;align-content:start}
+.met .big{font-size:18px;font-weight:700;line-height:1.4}
+.filt{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.filt button{flex:none;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:22px;background:var(--bg);font-size:14px;white-space:nowrap}
+.filt button[aria-pressed="true"]{border:2px solid var(--fg);background:var(--sel);font-weight:700}
+.grps{display:grid;gap:6px}
+.grps h2{font-size:14px;font-weight:700}
+.grp{display:grid;grid-template-columns:minmax(0,1fr);gap:2px 10px;align-items:center;min-height:44px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);text-align:left}
+.grp[aria-pressed="true"]{border:2px solid var(--fg);background:var(--sel)}
+.grp .bk{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.grp .bk i{display:block;height:100%;background:var(--bad)}
+.shown{font-size:13px;color:var(--muted)}
+table.st{border-collapse:collapse;width:100%;font-size:14px}
+.st th{text-align:left;font-size:13px;font-weight:700;padding:8px;border-top:4px solid var(--line);border-bottom:1px solid var(--line)}
+.st th.h-me{border-top-color:var(--me)}.st th.h-jun{border-top-color:var(--jun)}.st th.h-gem{border-top-color:var(--gem)}
+.st td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.st tr.op{cursor:pointer}.st tr.op:hover td{background:var(--sel)}
+.st .c-cut{display:flex;gap:10px;align-items:center}
+.st img{width:42px;height:56px;object-fit:cover;border-radius:3px;background:var(--media);flex:none}
+.cutlink{background:none;border:0;padding:0;min-height:44px;text-align:left;text-decoration:underline;text-underline-offset:3px}
+.mask{display:inline-block;padding:2px 10px;background:var(--sel);color:var(--muted);border-radius:4px;font-size:13px}
+.st td .mini{min-height:44px;padding:0 10px;margin:0 4px 4px 0;border:1px solid var(--muted);border-radius:6px;background:var(--bg);font-size:13px}
+.st .rs{font-weight:700;font-size:13.5px}
+.st .rs small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.foot{display:flex;gap:12px;flex-wrap:wrap}
+.foot button{min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+/* 시트·크게 보기 */
+.sheetwrap{position:fixed;inset:0;z-index:30}
+.sbk{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:80vh;max-height:80svh;overflow:auto;background:var(--bg);border-radius:14px 14px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom));display:grid;gap:10px}
+.sheet header{display:flex;justify-content:space-between;align-items:center}
+.sheet h2{font-size:17px}
+.sheet header button{min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.sheet ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
+.sheet table{border-collapse:collapse;font-size:14px;width:100%}
+.sheet td{padding:6px 4px;border-bottom:1px solid var(--line)}
+.sheet td:first-child{white-space:nowrap;font-family:var(--mono)}
+.lb{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.92);color:#fff;display:grid;grid-template-rows:auto 1fr auto;padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+.lb button{min-height:44px;min-width:44px;padding:0 12px;color:#fff;background:transparent;border:1px solid #999;border-radius:6px;font-size:14px}
+.lb button[aria-pressed="true"]{background:#fff;color:#000}
+.lb button:focus-visible{outline-color:#8ab4f8}
+.lbt{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}
+.lbb{position:relative;min-height:0;display:grid;place-items:center;touch-action:pinch-zoom pan-x pan-y;overflow:auto}
+.lbb img,.lbb video{max-width:100%;max-height:100%;object-fit:contain;background:#000}
+.lbc{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding-top:6px}
+@media (min-width:721px){
+.sheet{left:auto;top:0;width:400px;max-height:none;border-radius:0;border-left:1px solid var(--line)}
+}
+@media (max-width:720px){
+body{font-size:15px}
+.kb{display:none}
+.media{grid-template-columns:1fr}
+.stage{height:min(46svh,420px)}
+.thumbs{gap:4px}
+.th{max-width:none}
+.dec{min-height:56px}
+.dec2{min-width:0;flex:1 1 140px}
+.rbar{grid-template-columns:1fr}
+.next{width:100%}
+.why{grid-template-columns:1fr}
+.box p{font-size:14px}
+.mets{grid-template-columns:1fr}
+.rr{grid-template-columns:96px minmax(0,1fr)}
+.rr .rel{grid-column:2;text-align:left}
+.cnt{display:none}
+.st thead{display:none}
+.st,.st tbody{display:block}
+.st tr{display:grid;grid-template-columns:56px 1fr 1fr;grid-template-areas:"t c c" "t a b" "t g r";gap:2px 8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.st td{border:0;padding:0;min-width:0}
+.st td::before{content:attr(data-l) " ";font-size:12px;color:var(--muted)}
+.st td.c-cut{display:contents}
+.st td.c-cut::before{content:none}
+.st td.c-cut img{grid-area:t;width:56px;height:75px;align-self:start}
+.st td.c-cut .cutlink{grid-area:c;font-weight:700}
+.st td.c-me{grid-area:a}.st td.c-jun{grid-area:b}.st td.c-gem{grid-area:g}.st td.c-res{grid-area:r}
+.st td.c-res::before{content:none}
+.st tr.op:hover td{background:none}
+.sum .foot button{flex:1}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
-<div class="app">
-<div class="top"><h1>숏쿡 컷 판정 화면</h1><span class="sub">팀 시험 가게 주문 · 생성 컷 9개 · 저장되지 않음</span></div>
-<p class="intro">원본 사진과 생성 영상의 프레임을 비교해 <b>결함·정상·애매</b>를 고르면, <b>지원자 정답</b>과 <b>LLM 판정 모델(Gemini)</b>의 판정이 함께 열립니다. 키보드 <b>1·2·3</b>으로도 고를 수 있고, 고른 답은 바꿀 수 없습니다.</p>
-<div class="main">
-<div class="filters" role="group" aria-label="보기"><span>보기</span><button type="button" data-f="all" class="on">전체 9</button><button type="button" data-f="todo">안 한 컷</button><button type="button" data-f="diff">판정 모델과 정답이 다른 컷</button></div>
-<div class="thead" aria-hidden="true"><div>컷</div><div class="hp">원본 · 엔진 입력</div><div class="hc">생성 영상 프레임</div><div>판정</div></div>
-<div id="rows"></div>
-</div>
-<aside>
-<section class="panel"><h2>진행</h2><div><span class="big" id="cnt">0</span> <span class="legend">/ 9 컷 판정함</span></div><div class="meter"><i id="pg"></i></div></section>
-<section class="panel"><h2>내 선택과의 일치</h2><table><tbody><tr><td>지원자 정답</td><td class="n" id="a1">–</td><td><div class="hb"><i id="b1" style="background:var(--fg)"></i></div></td></tr><tr><td>판정 모델</td><td class="n" id="a2">–</td><td><div class="hb"><i id="b2" style="background:var(--muted)"></i></div></td></tr></tbody></table><p>정답을 연 컷만 세고, 애매는 뺍니다.</p></section>
-<section class="panel"><h2>판정 모델 대 지원자 정답</h2><table><tbody id="conf"></tbody></table><p id="confnote">판정한 컷만 셉니다.</p></section>
-<section class="panel" hidden><h2>내가 남긴 정보</h2><table><tbody id="mine"></tbody></table><p>애매는 일치율에서 빼되 여기 따로 셉니다. "영상에서만 보임"은 프레임 3장만 보는 판정 모델이 구조적으로 놓칠 수 있는 결함입니다.</p></section><section class="panel rules"><h2>결함 기준</h2><ul><li><b>음식 바뀜·사라짐</b> 사진 속 음식의 모양·크기·개수가 바뀌거나 사라짐</li><li><b>없던 음식·그릇·글자·배경</b> 사진에 없던 것이 생기거나 배경이 바뀜</li><li><b>손·도구</b> 지시에 없는 손·도구, 손 없이 뜬 도구</li><li><b>멈춤</b> 지시한 동작이 일어나지 않음</li><li><b>물리적으로 말 안 됨</b> 음식이나 도구가 현실에서 불가능하게 움직임</li><li><b>흐린 띠</b> 세로 화면을 맞추려 위아래에 덧댄 흐린 배경</li><li><b>기타</b> 위에 없는 결함</li></ul><p>지시 동작에 맞는 손·도구, 카메라 움직임, 김과 윤기는 결함이 아닙니다.</p><p>기준 버전: 2026-11-25 정답 기준(멈춤·흐린 띠 포함). 지원자 정답은 한 사람(박준혁)이 단 정답이고, 심각도는 매기지 않았습니다.</p></section>
-</aside>
-</div>
+<div id="app"></div>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
 <script>
 const ITEMS=[{"id": "S02", "cut": 2, "menu": "크랩랑군", "photo": "media/S02_photo.jpg", "input": null, "photo_source": "real", "clip": "media/S02.mp4", "sec": 1.08, "motion": "손 없음-미세움직임", "prompt": "The camera arcs slightly around the food while slowly pushing in. No hand or utensil enters. Thin steam rises from the food and its surface glistens; the food stays exactly as in the photo. Keep the same food and amounts. Keep every food item identical to the photo; do not add any new food.", "human": "defect", "human_why": "숏쿡 처리 단계가 위아래에 흐린 띠를 덧댐. 새 실주문 60컷에서도 판정 모델은 이 이유로 잡은 적이 없음", "judge": "pass", "judge_note": "음식, 접시, 장면이 그대로이고 카메라 움직임이 자연스럽다.", "kind": "blur", "frames": ["media/S02_f0.jpg", "media/S02_f1.jpg", "media/S02_f2.jpg"]}, {"id": "S03", "cut": 3, "menu": "차오미엔 세트", "photo": "media/S03_photo.jpg", "input": "media/S03_input.jpg", "photo_source": "variant", "clip": "media/S03.mp4", "sec": 1.08, "motion": "한 조각 들어올리기", "prompt": "The camera arcs slightly around the food while slowly pushing in. A small stainless steel spoon enters from the top, quickly takes one level spoonful from the front of the dish and lifts it close to the camera. Keep the same food and amounts.", "human": "defect", "human_why": "원본에 없던 흰 참깨가 생김(AI로 각도를 바꾼 사진에서 이미 생김), 흰 식탁보가 나무 식탁으로 바뀜. 판정 모델은 메모에 식탁 변화를 적고도 합격시켰고 참깨는 메모에도 없음", "judge": "pass", "judge_note": "식탁 표면이 흰색에서 나무로 바뀌었다.", "kind": "new", "frames": ["media/S03_f0.jpg", "media/S03_f1.jpg", "media/S03_f2.jpg"]}, {"id": "S04", "cut": 4, "menu": "차오미엔 세트", "photo": "media/S04_photo.jpg", "input": null, "photo_source": "real", "clip": "media/S04.mp4", "sec": 0.79, "motion": "접시 밀어서 놓기", "prompt": "The camera arcs slightly around the food while slowly pushing in. A hand at the bottom edge pushes the plate forward across the table, lets go, and the plate settles in place. Keep the same food and amounts. Keep every food item identical to the photo; do not add any new food.", "human": "defect", "human_why": "숏쿡 처리 단계가 위아래에 흐린 띠를 덧댐. 새 실주문 60컷에서도 판정 모델은 이 이유로 잡은 적이 없음", "judge": "pass", "judge_note": "지시 동작대로 움직였고 원래 음식, 접시, 장면이 그대로다.", "kind": "blur", "frames": ["media/S04_f0.jpg", "media/S04_f1.jpg", "media/S04_f2.jpg"]}, {"id": "S05", "cut": 5, "menu": "차오미엔 세트", "photo": "media/S05_photo.jpg", "input": "media/S05_input.jpg", "photo_source": "variant", "clip": "media/S05.mp4", "sec": 0.75, "motion": "손 없음-미세움직임", "prompt": "The camera arcs slightly around the food while slowly pushing in. No hand or utensil enters. Thin steam rises from the food and its surface glistens; the food stays exactly as in the photo. Keep the same food and amounts.\nEach shot shows exactly the food in its image: keep every food item identical to that image and do not add any new food. Exception: the broth or garnish that an action shot's instruction describes.\nNo new people or faces enter the frame. A hand or utensil appears only in a shot whose instruction describes it.\nHands are small and natural in size, a utensil that enters is the one its instruction names, a utensil already in the photo keeps its look, and broth that drips back is the same color as the broth in the bowl.\nCut between shots only at the times listed above.", "human": "defect", "human_why": "AI로 각도를 바꾼 사진에서 앞쪽의 큰 튀김 조각들이 작은 조각 여러 개로 바뀌었고, 영상도 그대로 따라감", "judge": "pass", "judge_note": "음식, 그릇, 주변이 그대로이고 지시한 카메라 움직임을 했다.", "kind": "food", "frames": ["media/S05_f0.jpg", "media/S05_f1.jpg", "media/S05_f2.jpg"]}, {"id": "S06", "cut": 6, "menu": "차오미엔 세트", "photo": "media/S06_photo.jpg", "input": "media/S06_input.jpg", "photo_source": "variant", "clip": "media/S06.mp4", "sec": 1.29, "motion": "한 조각 들어올리기", "prompt": "The camera arcs slightly around the food while slowly pushing in. A small stainless steel spoon enters from the top, quickly takes one level spoonful from the front of the dish and lifts it close to the camera. Keep the same food and amounts.\nEach shot shows exactly the food in its image: keep every food item identical to that image and do not add any new food. Exception: the broth or garnish that an action shot's instruction describes.\nNo new people or faces enter the frame. A hand or utensil appears only in a shot whose instruction describes it.\nHands are small and natural in size, a utensil that enters is the one its instruction names, a utensil already in the photo keeps its look, and broth that drips back is the same color as the broth in the bowl.\nCut between shots only at the times listed above.", "human": "defect", "human_why": "원본에 없던 흰 참깨가 생김(AI로 각도를 바꾼 사진에서 이미 생김), 흰 식탁보가 나무 식탁으로 바뀜. 판정 모델은 메모에 식탁 변화를 적고도 합격시켰고 참깨는 메모에도 없음", "judge": "pass", "judge_note": "식탁 표면이 흰색에서 나무로 바뀌었다.", "kind": "new", "frames": ["media/S06_f0.jpg", "media/S06_f1.jpg", "media/S06_f2.jpg"]}, {"id": "S07", "cut": 7, "menu": "볶음밥 세트", "photo": "media/S07_photo.jpg", "input": null, "photo_source": "real", "clip": "media/S07.mp4", "sec": 1.42, "motion": "손 없음-카메라 다가감", "prompt": "No hand or utensil enters. The camera slowly pushes in toward the food while its surface glistens; the food stays exactly as in the photo. Keep the same food and amounts.", "human": "no_defect", "human_why": "", "judge": "pass", "judge_note": "카메라가 부드럽게 다가가고 음식과 장면이 그대로다.", "kind": null, "frames": ["media/S07_f0.jpg", "media/S07_f1.jpg", "media/S07_f2.jpg"]}, {"id": "S08", "cut": 8, "menu": "볶음밥 세트", "photo": "media/S08_photo.jpg", "input": "media/S08_input.jpg", "photo_source": "variant", "clip": "media/S08.mp4", "sec": 0.5, "motion": "한 조각 들어올리기", "prompt": "The camera arcs slightly around the food while slowly pushing in. A small stainless steel spoon enters from the top, quickly takes one level spoonful from the edge nearest the camera and lifts it toward the camera; the rest of the dish stays as in the photo. Keep the same food and amounts.\nEach shot shows exactly the food in its image: keep every food item identical to that image and do not add any new food. Exception: the broth or garnish that an action shot's instruction describes.\nNo new people or faces enter the frame. A hand or utensil appears only in a shot whose instruction describes it.\nHands are small and natural in size, a utensil that enters is the one its instruction names, a utensil already in the photo keeps its look, and broth that drips back is the same color as the broth in the bowl.\nCut between shots only at the times listed above.", "human": "no_defect", "human_why": "판정 모델 메모처럼 숟가락이 움직이지만 뜨지는 못함. 사진이 바뀌지 않았고 멈추지도 않아 제 기준으로는 결함이 아님", "judge": "pass", "judge_note": "숟가락이 음식을 뜨지 못하고 끝까지 비어 있다.", "kind": null, "frames": ["media/S08_f0.jpg", "media/S08_f1.jpg", "media/S08_f2.jpg"]}, {"id": "S09", "cut": 9, "menu": "볶음밥 세트", "photo": "media/S09_photo.jpg", "input": "media/S09_input.jpg", "photo_source": "variant", "clip": "media/S09.mp4", "sec": 0.88, "motion": "접시 당기기", "prompt": "The camera arcs slightly around the food while slowly pushing in. A hand outside the frame quickly pulls the plate under the food a hand's width toward the bottom edge; the food slides along unchanged. Keep the same food and amounts.", "human": "no_defect", "human_why": "", "judge": "pass", "judge_note": "접시와 음식이 원본 사진과 같고 당기는 동작이 깔끔하다.", "kind": null, "frames": ["media/S09_f0.jpg", "media/S09_f1.jpg", "media/S09_f2.jpg"]}, {"id": "S11", "cut": 11, "menu": "크랩랑군", "photo": "media/S11_photo.jpg", "input": "media/S11_input.jpg", "photo_source": "variant", "clip": "media/S11.mp4", "sec": 3.0, "motion": "접시 당기기", "prompt": "The camera arcs slightly around the food while slowly pushing in. A hand outside the frame quickly pulls the plate under the food a hand's width toward the bottom edge; the food slides along unchanged. Keep the same food and amounts. Keep every food item identical to the photo; do not add any new food.", "human": "defect", "human_why": "마지막에 같은 접시가 하나 더 나타남", "judge": "fail", "judge_note": "마지막 프레임에 같은 접시가 하나 더 나타난다.", "kind": "new", "frames": ["media/S11_f0.jpg", "media/S11_f1.jpg", "media/S11_f2.jpg"]}];
 const KIND={food:"음식 바뀜·사라짐",new:"없던 음식·그릇·글자·배경",hand:"손·도구",static:"멈춤",physics:"물리적으로 말 안 됨",blur:"흐린 띠",other:"기타"};
-const VL={defect:"결함",no_defect:"정상",ambiguous:"애매"};const VC={defect:"d",no_defect:"p",ambiguous:"a"};
-const state={},kinds={},els={};let filt="all";
-const $=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;};
-const jk=it=>it.judge==="fail"?"defect":"no_defect";
-function overlay(node,extra){const b=$("div","lb");b.tabIndex=-1;b.append(node);if(extra)b.append(extra);const close=()=>{b.remove();};b.addEventListener("click",e=>{if(e.target===b)close();});b.addEventListener("keydown",e=>{if(e.key==="Escape")close();});document.body.append(b);b.focus();}
-function zoom(src,alt){const i=$("img");i.src=src;i.alt=alt;overlay(i);}
-function playClip(it){const v=document.createElement("video");v.src=it.clip;v.muted=true;v.loop=true;v.playsInline=true;v.controls=true;v.autoplay=true;v.playbackRate=.5;const ctl=$("div","ctl");[[1,"1배"],[.5,"0.5배"],[.25,"0.25배"]].forEach(([r,l])=>{const b=$("button",r===.5?"on":"",l);b.type="button";b.onclick=()=>{v.playbackRate=r;ctl.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));};ctl.append(b);});overlay(v,ctl);}
-function fig(src,cap){const f=$("figure");const i=$("img");i.src=src;i.alt=cap;i.loading="lazy";i.tabIndex=0;i.onclick=()=>zoom(src,cap);i.onkeydown=e=>{if(e.key==="Enter")zoom(src,cap);};f.append(i,$("figcaption",null,cap));return f;}
-const rows=document.getElementById("rows");
-const ORDER=ITEMS.slice();for(let i=ORDER.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ORDER[i],ORDER[j]]=[ORDER[j],ORDER[i]];}
-const sev={},vis={},opened={};
-function chips(label,opts,store,id){const q=$("div","q");q.append($("span",null,label));const box=$("div","kinds");const bs={};Object.entries(opts).forEach(([k,l])=>{const b=$("button",null,l);b.type="button";b.setAttribute("aria-pressed","false");b.onclick=()=>{store[id]=store[id]===k?null:k;Object.entries(bs).forEach(([kk,bb])=>bb.setAttribute("aria-pressed",String(store[id]===kk)));if(opened[id]){show(id);tally();}};box.append(b);bs[k]=b;});q.append(box);return q;}
-ORDER.forEach((it,i)=>{
-  const r=$("div","row");r.id="cut-"+it.id;
-  const c0=$("div","c-id");c0.append($("span","no","컷 "+it.cut),$("span","menu",it.menu||""));
-  const c1=$("div","c-photo");const s1=$("div","strip");s1.style.setProperty("--n",2);s1.append(fig(it.photo,"원본"));if(it.input)s1.append(fig(it.input,it.photo_source==="crop"?"엔진 입력 · 자른 사진":"엔진 입력 · AI 각도 변형"));else{const f=$("figure");f.append($("div","noinput","엔진 입력도 원본 그대로"),$("figcaption",null,"엔진 입력"));s1.append(f);}c1.append(s1);
-  const c2=$("div","c-clip");const s2=$("div","strip");s2.style.setProperty("--n",3);["처음","중간","끝"].forEach((n,k)=>s2.append(fig(it.frames[k],n)));
-  const pl=$("button","play",`영상 재생 · ${it.sec}초`);pl.type="button";pl.onclick=()=>playClip(it);
-  c2.append(s2,$("div","motion","지시 동작 · "+(it.motion||"")),pl);
-  const c3=$("div","c-v");const vb=$("div","vb");vb.setAttribute("role","group");vb.setAttribute("aria-label","컷 "+it.cut+" 판정");const bt={};
-  Object.keys(VL).forEach(k=>{const b=$("button","k-"+k,VL[k]);b.type="button";b.setAttribute("aria-pressed","false");b.onclick=()=>pick(it.id,k);vb.append(b);bt[k]=b;});
-  const kd=$("div","follow");kd.hidden=true;kd.append(chips("어떤 결함인가요? (선택)",KIND,kinds,it.id),chips("얼마나 큰가요? (선택)",{small:"작음",big:"큼(손님이 다른 음식으로 볼 정도)"},sev,it.id),chips("프레임 3장에서도 보이나요? (선택)",{yes:"보임",clip:"영상에서만 보임"},vis,it.id));const rb=$("button","reveal","정답 보기");rb.type="button";rb.onclick=()=>{opened[it.id]=true;rb.remove();kd.querySelectorAll("button").forEach(b=>b.disabled=true);show(it.id);tally();apply();};/* 정답 보기 버튼 없음: 고르면 바로 열림 */
-  const out=$("div");out.hidden=true;
-  c3.append(vb,kd,out);r.append(c0,c1,c2,c3);rows.append(r);els[it.id]={r,bt,kd,out};
-});
-function show(id){const it=ITEMS.find(x=>x.id===id);const e=els[id];const o=e.out;o.textContent="";
-  const dl=$("dl","res");const add=(k,v)=>{dl.append($("dt",null,k),$("dd",VC[v],VL[v]));};add("내 선택",state[id]);add("지원자 정답",it.human);add("판정 모델",jk(it));o.append(dl);
-  const ok=jk(it)===it.human;o.append($("div","flag "+(ok?"p":"d"),"지원자 정답 기준: "+(ok?"판정 모델이 맞힘":(it.human==="defect"?"판정 모델이 결함을 놓침":"판정 모델이 정상 컷을 떨어뜨림"))));if(state[id]!=="ambiguous")o.append($("div","legend",state[id]===it.human?"내 선택은 지원자 정답과 같습니다.":"내 선택은 지원자 정답과 다릅니다."));
-  if(it.human==="defect"&&it.kind){const mk=kinds[id];o.append($("div","legend","정답 종류: "+KIND[it.kind]+(mk?(mk===it.kind?" · 내 선택과 같음":" · 내 선택: "+KIND[mk]):"")));}
-  const d=$("details","why");d.append($("summary",null,"이유와 판정 모델 메모"));if(it.human_why)d.append($("p",null,"지원자 정답 이유: "+it.human_why));d.append($("p",null,"판정 모델: "+it.judge_note));const pr=$("p","mono",it.prompt);d.append(pr);o.append(d);o.hidden=false;}
-function pick(id,k){if(state[id])return;state[id]=k;const e=els[id];Object.entries(e.bt).forEach(([kk,b])=>{b.setAttribute("aria-pressed",String(kk===k));b.disabled=true;});e.r.classList.add("done");opened[id]=true;show(id);if(k==="defect")e.kd.hidden=false;const nx=ORDER.find(x=>!state[x.id]&&!document.getElementById("cut-"+x.id).hidden);if(nx)document.getElementById("cut-"+nx.id).scrollIntoView({behavior:"smooth",block:"start"});tally();apply();}
-function tally(){const ids=Object.keys(state).filter(i=>opened[i]);const it=i=>ITEMS.find(x=>x.id===i);
-  const picked=Object.keys(state).length;document.getElementById("cnt").textContent=picked;document.getElementById("pg").style.width=100*picked/ITEMS.length+"%";
-  const dec=ids.filter(i=>state[i]!=="ambiguous");const m1=dec.filter(i=>state[i]===it(i).human).length,m2=dec.filter(i=>state[i]===jk(it(i))).length;
-  const set=(a,b,m)=>{document.getElementById(a).textContent=dec.length?m+"/"+dec.length:"–";document.getElementById(b).style.width=dec.length?100*m/dec.length+"%":"0";};set("a1","b1",m1);set("a2","b2",m2);
-  const c={hit:0,miss:0,fa:0};ids.forEach(i=>{const x=it(i);if(jk(x)===x.human)c.hit++;else if(x.human==="defect")c.miss++;else c.fa++;});
-  const tb=document.getElementById("conf");tb.textContent="";const tot=ids.length||1;
-  [["맞힘","hit","var(--ok)"],["결함을 놓침","miss","var(--bad)"],["정상을 떨어뜨림","fa","var(--amb)"]].forEach(([l,k,col])=>{const tr=$("tr");const td=$("td");const hb=$("div","hb");const i=$("i");i.style.width=100*c[k]/tot+"%";i.style.background=col;hb.append(i);td.append(hb);tr.append($("td",null,l),$("td","n",ids.length?String(c[k]):"–"),td);tb.append(tr);});
-  const blur=ids.filter(i=>it(i).kind==="blur"&&jk(it(i))!==it(i).human).length,vari=ids.filter(i=>it(i).photo_source==="variant"&&it(i).human==="defect"&&jk(it(i))!==it(i).human).length;
-  const mt=document.getElementById("mine");mt.textContent="";const all=Object.keys(state);[["판정한 컷",all.length],["애매",all.filter(i=>state[i]==="ambiguous").length],["결함으로 본 컷",all.filter(i=>state[i]==="defect").length],["그중 큼",all.filter(i=>sev[i]==="big").length],["그중 영상에서만 보임",all.filter(i=>vis[i]==="clip").length]].forEach(([l,n])=>{const tr=$("tr");tr.append($("td",null,l),$("td","n",String(n)));mt.append(tr);});
-  document.getElementById("confnote").textContent=c.miss?`놓친 ${c.miss}컷 중 흐린 띠 ${blur}컷, 엔진 입력이 AI 각도 변형인 컷 ${vari}컷.`:"판정한 컷만 셉니다.";}
-function apply(){Object.entries(els).forEach(([id,e])=>{const it=ITEMS.find(x=>x.id===id);let v=true;if(filt==="todo")v=!state[id];if(filt==="diff")v=jk(it)!==it.human&&!!opened[id];e.r.hidden=!v;});}
-document.querySelectorAll(".filters button").forEach(b=>b.onclick=()=>{filt=b.dataset.f;document.querySelectorAll(".filters button").forEach(x=>x.classList.toggle("on",x===b));apply();});
-tally();
-document.addEventListener("keydown",ev=>{if(ev.metaKey||ev.ctrlKey||ev.altKey||/INPUT|TEXTAREA/.test(ev.target.tagName))return;const m={"1":"defect","2":"no_defect","3":"ambiguous"}[ev.key];if(!m)return;const nx=ORDER.find(x=>!state[x.id]&&!document.getElementById("cut-"+x.id).hidden);if(nx){ev.preventDefault();pick(nx.id,m);}});
-</script>
+const root=document.getElementById("app");
+const $=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+const btn=(c,x,f)=>{const b=$("button",c,x);b.type="button";if(f)b.onclick=f;return b};
+const BY={};ITEMS.forEach(i=>BY[i.id]=i);
+const ORDER=["S03","S07","S11","S02","S08","S05","S04","S09","S06"].map(i=>BY[i]);
+const BYCUT=ITEMS.slice().sort((a,b)=>a.cut-b.cut);
+const VAL={defect:["▲","결함"],no_defect:["●","정상"],ambiguous:["◆","애매"],skip:["–","건너뜀"]};
+const jv=it=>it.judge==="fail"?"defect":"no_defect";
+const res=it=>jv(it)===it.human?"ok":(it.human==="defect"?"miss":"drop");
+const RES={ok:["✓","맞힘","맞힘","t-ok"],miss:["✕","결함을 놓침","Gemini가 놓침","t-bad"],drop:["!","정상 컷을 떨어뜨림","정상 컷을 떨어뜨림","t-amb"]};
+const mq=matchMedia("(max-width:720px)"),mob=()=>mq.matches;
+const rm=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const SPEEDS=[0.25,0.5,1];
 
+/* 상태 */
+let S={a:{},all:false,speed:0.5,b3:null,last:null};
+try{const j=sessionStorage.getItem("sc3");if(j)S=Object.assign(S,JSON.parse(j))}catch(e){}
+const save=()=>{try{sessionStorage.setItem("sc3",JSON.stringify(S))}catch(e){}};
+const isOpen=id=>S.all||!!S.a[id];
+let fresh=null,revealAt=0,fromSum=false,filt="all",wdId=null,wdT=0,repaint=null,mainStage=null,dlg=null,lastKey=null;
+const cleanups=[];
+const live=m=>{const l=document.getElementById("live");l.textContent="";setTimeout(()=>{l.textContent=m},30)};
+
+/* 길 찾기 */
+function route(){const h=location.hash.slice(1);if(h==="summary")return{v:"summary",key:"summary"};const m=h.match(/^cut-(S\d+)$/);if(m&&BY[m[1]])return{v:"cut",id:m[1],key:h};return{v:"intro",key:"intro"}}
+function go(h){if(location.hash==="#"+h)render();else location.hash=h}
+function goCut(id,fs){fromSum=!!fs;go("cut-"+id)}
+const nextOf=id=>{const i=ORDER.findIndex(x=>x.id===id);return i+1<ORDER.length?"cut-"+ORDER[i+1].id:"summary"};
+
+/* 값 표시 */
+function valEl(v,kind){const s=$("span","val");s.append($("span","ic",VAL[v][0]),document.createTextNode(VAL[v][1]));if(kind)s.append($("small",null," · "+KIND[kind]));return s}
+
+/* 대화상자 관리 */
+function showDlg(el,focusEl,opts){closeDlg(true);dlg=Object.assign({el,prev:document.activeElement,close(){closeDlg()}},opts||{});document.body.append(el);if(focusEl)focusEl.focus({preventScroll:true})}
+function closeDlg(noFocus){if(!dlg)return;const d=dlg;dlg=null;d.el.remove();if(d.off)d.off();if(!noFocus&&d.prev&&document.contains(d.prev))d.prev.focus({preventScroll:true})}
+function sheet(title,content){const wrap=$("div","sheetwrap"),bk=$("div","sbk"),p=$("div","sheet");bk.onclick=()=>closeDlg();p.setAttribute("role","dialog");p.setAttribute("aria-modal","true");p.setAttribute("aria-label",title);const hd=$("header"),x=btn(null,"닫기",()=>closeDlg());hd.append($("h2",null,title),x);p.append(hd,content);wrap.append(bk,p);showDlg(wrap,x,{trap:p})}
+function criteria(){const d=$("div");d.style.display="grid";d.style.gap="10px";const ul=$("ul");[["음식 바뀜·사라짐","사진 속 음식의 모양·크기·개수가 바뀌거나 사라짐"],["없던 음식·그릇·글자·배경","사진에 없던 것이 생기거나 배경이 바뀜"],["손·도구","지시에 없는 손·도구, 손 없이 뜬 도구"],["멈춤","지시한 동작이 일어나지 않음"],["물리적으로 말 안 됨","음식이나 도구가 현실에서 불가능하게 움직임"],["흐린 띠","세로 화면을 맞추려 위아래에 덧댄 흐린 배경"],["기타","위에 없는 결함"]].forEach(([a,b])=>{const li=$("li");li.append($("b",null,a+" "),document.createTextNode(b));ul.append(li)});d.append(ul,$("p",null,"지시 동작에 맞는 손·도구, 카메라 움직임, 김과 윤기는 결함이 아닙니다."),$("p","small","기준 버전 2026-11-25 · 정답 기준(멈춤·흐린 띠 포함)"),$("p",null,"박준혁 정답은 한 사람의 기준입니다. 심각도는 매기지 않았습니다."));return d}
+const openCriteria=()=>sheet("결함 기준",criteria());
+function openHelp(){const t=$("table");[["1","결함"],["2","정상"],["3","애매"],["4","건너뛰고 정답 보기"],["Space","영상 재생/일시정지"],["S","속도 순환(0.25배, 0.5배, 1배)"],["← / →","이전 컷 / 다음 컷(공개 뒤에만)"],["Enter","다음 컷(공개 뒤)"],["F","크게 보기"],["C","누르는 동안 원본 겹쳐 보기"],["L","요약"],["?","이 도움말"],["Esc","크게 보기·도움말·기준 닫기"]].forEach(([k,v])=>{const r=$("tr");r.append($("td",null,k),$("td",null,v));t.append(r)});sheet("키보드",t)}
+
+/* 속도 */
+function setSpeed(r){S.speed=r;save();document.querySelectorAll("video").forEach(v=>{v.defaultPlaybackRate=r;v.playbackRate=r});document.querySelectorAll(".spd").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.r===r)))}
+function speedChips(){const g=$("div","spdg");g.setAttribute("role","group");g.setAttribute("aria-label","재생 속도");SPEEDS.forEach(r=>{const b=btn("spd",(mob()?String(r):r+"배"),()=>setSpeed(r));b.dataset.r=r;b.setAttribute("aria-label",r+"배");b.setAttribute("aria-pressed",String(S.speed===r));g.append(b)});return g}
+function applyRate(v){v.defaultPlaybackRate=S.speed;v.playbackRate=S.speed}
+
+/* 크게 보기 */
+function lightbox(items,i0){let i=i0;const wrap=$("div","lb");wrap.setAttribute("role","dialog");wrap.setAttribute("aria-modal","true");wrap.setAttribute("aria-label","크게 보기");
+const top=$("div","lbt"),cap=$("span"),close=btn(null,"닫기 (Esc)",()=>closeDlg());top.append(cap,close);
+const body=$("div","lbb"),ctl=$("div","lbc");
+const pv=btn(null,"‹ 이전",()=>mv(-1)),nx=btn(null,"다음 ›",()=>mv(1));
+function mv(d){i=(i+items.length+d)%items.length;show()}
+function show(){const it=items[i];body.replaceChildren();ctl.replaceChildren();cap.textContent=it.label+(it.cap?" · "+it.cap:"")+"  ("+(i+1)+"/"+items.length+")";
+if(it.type==="video"){const v=document.createElement("video");v.muted=true;v.loop=true;v.playsInline=true;v.autoplay=!rm;v.src=it.src;applyRate(v);v.addEventListener("loadedmetadata",()=>applyRate(v));body.append(v);if(!rm)v.play().catch(()=>{});ctl.append(speedChips())}
+else{const m=document.createElement("img");m.src=it.src;m.alt=it.label;body.append(m)}
+if(items.length>1)ctl.prepend(pv,nx)}
+wrap.append(top,body,ctl);show();
+showDlg(wrap,close,{trap:wrap,key(e){if(e.key==="ArrowLeft"){mv(-1);e.preventDefault()}else if(e.key==="ArrowRight"){mv(1);e.preventDefault()}else if(e.key===" "){const v=body.querySelector("video");if(v){v.paused?v.play():v.pause();e.preventDefault()}}else if(e.key==="s"||e.key==="S"){cycleSpeed()}}})}
+function cycleSpeed(){setSpeed(SPEEDS[(SPEEDS.indexOf(S.speed)+1)%SPEEDS.length])}
+
+/* 무대 */
+function makeStage(items,o){
+const root=$("div");let cur=0,vd=null,raf=0,blocked=false;
+if(o.head)root.append($("div","sh",o.head));
+const st=$("div","stage"),img=document.createElement("img");img.alt="";
+const vi=items.findIndex(x=>x.type==="video");
+let ov=null,fl=null;
+if(vi>=0){vd=document.createElement("video");vd.muted=true;vd.loop=true;vd.playsInline=true;vd.setAttribute("muted","");vd.setAttribute("playsinline","");vd.preload="auto";vd.poster=items[vi].thumb;vd.src=items[vi].src;applyRate(vd)}
+if(o.flick){fl=document.createElement("img");fl.src=o.flick;fl.alt="";fl.className="fl";fl.hidden=true}
+st.append(img);if(vd)st.append(vd);if(fl)st.append(fl);
+const zoom=btn("zoom","크게 보기 (F)",()=>openLb());zoom.setAttribute("aria-keyshortcuts","F");st.append(zoom);
+if(vd){ov=btn("playov","▶",()=>{vd.play().catch(()=>{})});ov.setAttribute("aria-label","재생");st.append(ov)}
+const cap=$("div","cap"),thumbs=$("div","thumbs"),tbs=[];
+items.forEach((it,i)=>{const b=btn("th");b.setAttribute("aria-pressed","false");const m=document.createElement("img");m.src=it.thumb;m.alt="";b.append(m,$("span",null,it.label+(it.dot?" •":"")));b.setAttribute("aria-label",it.label+(it.dot?" (다른 사진이 더 있음)":""));b.onclick=()=>sel(i);thumbs.append(b);tbs.push(b)});
+let ctl=null,play=null,msg=$("div","vmsg");msg.hidden=true;
+if(vd){ctl=$("div","ctl");play=btn(null,mob()?"❚❚":"❚❚ 일시정지",()=>toggle());play.setAttribute("aria-label","일시정지");play.setAttribute("aria-keyshortcuts","Space");
+const rp=btn(null,mob()?"다시":"이 컷 다시 재생",()=>{sel(vi);vd.currentTime=0;vd.play().catch(()=>{})});rp.setAttribute("aria-label","이 컷 다시 재생");
+const tr=$("div","track"),fill=$("i");tr.append(fill);tr.setAttribute("aria-hidden","true");
+ctl.append(play,speedChips(),rp,tr,$("span","dur","영상 "+o.sec.toFixed(2)+"초"));
+const tick=()=>{if(vd.duration)fill.style.width=(vd.currentTime/vd.duration*100)+"%";raf=requestAnimationFrame(tick)};tick();cleanups.push(()=>cancelAnimationFrame(raf));
+const sync=()=>{const p=vd.paused;play.textContent=p?(mob()?"▶":"▶ 재생"):(mob()?"❚❚":"❚❚ 일시정지");play.setAttribute("aria-label",p?"재생":"일시정지");ov.hidden=!(p&&cur===vi)};
+vd.addEventListener("play",()=>{applyRate(vd);sync()});vd.addEventListener("pause",sync);vd.addEventListener("loadedmetadata",()=>applyRate(vd));
+vd.addEventListener("error",()=>{msg.textContent="영상을 불러오지 못했습니다. 프레임으로 판정하세요.";msg.hidden=false;const f=items.findIndex(x=>x.type==="img"&&/^f0/.test(x.k));sel(f>=0?f:0)});
+st.addEventListener("click",e=>{if(e.target===img||e.target===vd){if(o.sup&&Date.now()<o.sup.t)return;openLb()}});
+vd.sync=sync}
+function toggle(){if(!vd)return;if(cur!==vi)sel(vi);if(vd.paused)vd.play().catch(()=>{});else vd.pause()}
+function sel(i){cur=i;const it=items[i];tbs.forEach((b,k)=>b.setAttribute("aria-pressed",String(k===i)));cap.textContent=it.cap||"";
+if(it.type==="video"){img.hidden=true;vd.hidden=false;if(!rm){const p=vd.play();if(p&&p.catch)p.catch(()=>{})}}
+else{img.hidden=false;img.src=it.src;img.alt=it.label;if(vd){vd.pause();vd.hidden=true}}
+if(ctl)ctl.hidden=it.type!=="video";if(vd&&vd.sync)vd.sync()}
+function openLb(){lightbox(items,cur)}
+function flick(on){if(fl)fl.hidden=!on}
+if(o.ctlFirst&&ctl)root.append(st,cap,ctl,thumbs,msg);else root.append(st,cap,thumbs,...(ctl?[ctl]:[]),msg);
+if(o.flick&&vd){let tm=0;const off=()=>{clearTimeout(tm);flick(false)};st.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse")return;tm=setTimeout(()=>{flick(true);o.sup={t:Date.now()+700}},400)});["pointerup","pointercancel","pointerleave"].forEach(n=>st.addEventListener(n,off))}
+sel(0);
+if(vd&&rm){vd.pause();vd.sync()}
+return{el:root,toggle,flick,openLb,sel}}
+
+function buildMedia(it){
+const f=it.frames,vid={k:"v",label:"영상",type:"video",src:it.clip,thumb:f[0]},org={k:"o",label:"원본",type:"img",src:it.photo,thumb:it.photo,cap:""},
+inp=it.input?{k:"i",label:"엔진 입력",type:"img",src:it.input,thumb:it.input,cap:"AI로 각도를 바꾼 사진",dot:true}:null,
+fr=["처음","중간","끝"].map((l,j)=>({k:"f"+j,label:l,type:"img",src:f[j],thumb:f[j],cap:""}));
+const wrap=$("div","media");
+if(mob()){mainStage=makeStage([vid,org,...(inp?[inp]:[]),...fr],{sec:it.sec,flick:it.photo});wrap.append(mainStage.el)}
+else{const L=makeStage([org,...(inp?[inp]:[])],{head:"원본",sec:it.sec});mainStage=makeStage([vid,...fr],{head:"생성 영상",sec:it.sec,flick:it.photo,ctlFirst:true});wrap.append(L.el,mainStage.el)}
+return wrap}
+
+/* 첫 화면 */
+function introView(){
+const w=$("main","intro");
+const h=$("h1",null,"AI 영상 컷 판정 체험");h.tabIndex=-1;h.dataset.h=1;
+const steps=$("div","steps");[["1","영상 보기"],["2","결함·정상·애매 고르기"],["3","두 판정 열림"]].forEach(([n,t],i)=>{if(i)steps.append($("span","muted","→"));const s=$("div","s");s.append($("span","n",n),$("span",null,t));steps.append(s)});
+const lg=$("div","legend");[["me","내 답","방금 고른 답"],["jun","박준혁 정답","박준혁이 원본·프레임·영상을 보고 단 답"],["gem","Gemini 판정","같은 컷을 자동 판정한 LLM"]].forEach(([c,n,t])=>{const d=$("div");d.append($("span","chip "+c,n),$("span",null,t));lg.append(d)});
+const go1=btn("go","첫 컷 보기",()=>goCut(ORDER[0].id));
+const l2=btn("link","결과만 보기",()=>{S.all=true;save();go("summary")});
+w.append(h,$("p","lead","음식점 홍보 영상에서 AI가 만든 컷 9개입니다. 결함이 있는지 먼저 고르면 박준혁 정답과 Gemini 판정이 열립니다."),steps,lg,go1,l2,$("p","small","컷당 10~20초 · 고른 답은 저장되지 않고 바뀌지 않습니다 · 키보드 1 2 3"),$("p","small","만든 사람: 박준혁"));
+return w}
+
+/* 컷 화면 */
+function topbar(idx){
+const bar=$("header","topbar");
+const back=fromSum?btn("tb","← 요약",()=>go("summary")):(idx>0?btn("tb","← 이전",()=>goCut(ORDER[idx-1].id)):$("span","spacer"));
+const cells=$("nav","cells");cells.setAttribute("aria-label","컷 진행");
+ORDER.forEach((c,i)=>{const a=S.a[c.id],b=btn("cell"+(i===idx?" cur":"")+(a&&a.v==="skip"?" skip":"")+(isOpen(c.id)&&!(a&&a.v==="skip")?" done":""),null,()=>goCut(c.id));b.append($("i"));b.setAttribute("aria-label",(i+1)+"번째, 컷 "+c.cut+(isOpen(c.id)?(a?(a.v==="skip"?", 건너뜀":", 푼 컷"):", 열림"):", 안 푼 컷"));if(i===idx)b.setAttribute("aria-current","step");cells.append(b)});
+bar.append(back,cells,$("span","cnt",(idx+1)+"/9"));
+if(!mob()){bar.append(btn("tb","요약",()=>go("summary")),btn("tb","기준",openCriteria),btn("tb","?",openHelp))}
+else{const m=btn("tb","⋯");m.setAttribute("aria-label","메뉴");m.setAttribute("aria-haspopup","true");m.onclick=e=>{e.stopPropagation();if(dlg&&dlg.menu){closeDlg();return}const mn=$("div","menu");[["요약",()=>go("summary")],["결함 기준",openCriteria],["키보드",openHelp]].forEach(([t,f])=>mn.append(btn(null,t,()=>{closeDlg(true);f()})));const out=ev=>{if(!mn.contains(ev.target))closeDlg()};setTimeout(()=>document.addEventListener("click",out),0);showDlg(mn,mn.firstChild,{menu:true,trap:mn,off:()=>document.removeEventListener("click",out)});bar.append(mn)};bar.append(m)}
+return bar}
+
+function answer(id,v,k){if(isOpen(id))return;S.a[id]={v,k:k||null};fresh=id;revealAt=Date.now();wdId=(v==="skip")?null:id;clearTimeout(wdT);if(wdId){wdT=setTimeout(()=>{wdId=null;if(repaint)repaint()},3000)}
+if(Object.keys(S.a).length===3&&!S.b3)S.b3=id;save();if(repaint)repaint(true);
+const it=BY[id];live("내 답 "+VAL[v][1]+". 박준혁 정답 "+VAL[it.human][1]+". Gemini 판정 "+VAL[jv(it)][1]+". "+RES[res(it)][1]+".")}
+
+function decideBar(it){
+const b=$("div","barin");b.append($("p","q","원본 사진의 음식이 영상에서 그대로입니까?"));
+const row=$("div","drow");
+const mk=(c,n,v,f,keys)=>{const x=btn(c,null,f);x.append($("span","kb",n),$("span","ic",VAL[v][0]),document.createTextNode(VAL[v][1]));x.setAttribute("aria-keyshortcuts",n);return x};
+row.append(mk("dec","1","defect",()=>answer(it.id,"defect")),mk("dec","2","no_defect",()=>answer(it.id,"no_defect")));
+const r2=$("div","d2");const am=mk("dec2","3","ambiguous",()=>answer(it.id,"ambiguous"));
+const sk=btn("dec2",null,()=>answer(it.id,"skip"));sk.append($("span","kb","4"),document.createTextNode("건너뛰고 정답 보기"));sk.setAttribute("aria-keyshortcuts","4");
+r2.append(am,sk);
+const kinds=$("div","kinds");kinds.append($("span","kl","결함이라면 종류까지(선택)"));Object.keys(KIND).forEach(k=>kinds.append(btn(null,KIND[k],()=>answer(it.id,"defect",k))));
+b.append(row,r2);
+if(mob()){kinds.hidden=true;const tg=btn("ktog","종류도 고르기 ▾",()=>{kinds.hidden=!kinds.hidden;tg.textContent=kinds.hidden?"종류도 고르기 ▾":"종류 접기 ▴";tg.setAttribute("aria-expanded",String(!kinds.hidden))});tg.setAttribute("aria-expanded","false");b.append(tg,kinds)}
+else b.append(kinds);
+return b}
+
+function relRows(it){
+const a=S.a[it.id],g=res(it),w=$("div","rel3");
+const row=(chip,cls,valNode,rel,relCls)=>{const r=$("div","rr");r.append($("span","chip "+cls,chip),valNode,$("span","rel "+(relCls||"n"),rel||""));return r};
+let rel="",rv=a?a.v:null;
+if(!a)rel="";else if(a.v==="skip")rel="건너뜀";else if(a.v==="ambiguous")rel="애매는 일치에 세지 않음";else rel=a.v===it.human?"박준혁 정답과 같음":"박준혁 정답과 다름";
+const mine=row("내 답","me",rv?valEl(rv):$("span","val","–"),rel);
+if(a&&a.k&&a.v==="defect"){const s=$("div","sub","내가 고른 종류: "+KIND[a.k]+(it.human==="defect"&&it.kind?(a.k===it.kind?" (같음)":" (다름)"):""));mine.append(s)}
+const jun=row("박준혁 정답","jun",valEl(it.human==="defect"?"defect":"no_defect",it.kind),"");
+const gv=valEl(jv(it));gv.append($("small",null,jv(it)==="defect"?"(불합격 처리)":"(합격 처리)"));
+const gem=row("Gemini 판정","gem",gv,RES[g][0]+" "+RES[g][1],RES[g][3]);
+w.append(mine,jun,gem);return w}
+
+function headline(it){if(res(it)!=="miss")return null;const h=$("p","headline t-bad","✕ Gemini가 이 컷의 결함을 놓쳤습니다.");return h}
+
+function revealBar(it){
+const id=it.id,a=S.a[id],b=$("div","barin");
+if(wdId===id&&a&&a.v!=="skip"){const wd=$("div","wd");wd.append($("span",null,"잘못 눌렀나요?"),btn(null,"내 답을 건너뜀으로 바꾸기",()=>{S.a[id]={v:"skip",k:null};wdId=null;clearTimeout(wdT);save();repaint();live("내 답을 건너뜀으로 바꿨습니다.")}));b.append(wd)}
+const nm=nextOf(id),last=nm==="summary";
+const nb=btn("next",last?"요약 보기 →":"다음 컷 →",e=>{if(e.detail===0&&Date.now()-revealAt<400)return;fromSum=false;go(nm)});nb.setAttribute("aria-keyshortcuts","Enter");
+if(mob()){const hd=headline(it);if(hd){hd.style.fontSize="13.5px";b.append(hd)}const l=$("div","cline");[["me","내 답",a?a.v:null],["jun","박준혁 정답",it.human],["gem","Gemini 판정",jv(it)]].forEach(([c,n,v])=>{const s=$("span");s.append($("span","chip "+c,n),document.createTextNode(" "+(v?VAL[v][0]+VAL[v][1]:"–")));l.append(s)});b.append(l,nb)}
+else{const hd=headline(it);if(hd)b.append(hd);const r=$("div","rbar");r.append(relRows(it),nb);b.append(r)}
+return b}
+
+function afterEl(it){
+const d=$("div");d.style.display="grid";d.style.gap="12px";
+if(S.b3===it.id){const bn=$("div","ban");bn.append($("span",null,"3컷을 봤습니다. 요약을 볼 수 있습니다."),btn(null,"요약 보기",()=>go("summary")));d.append(bn)}
+if(mob())d.append(relRows(it))
+const why=$("div","why");const hasH=!!it.human_why;if(!hasH)why.classList.add("one");
+if(hasH){const x=$("div","box");x.append($("h3",null,"박준혁 정답의 이유"),$("p",null,it.human_why));why.append(x)}
+const y=$("div","box");y.append($("h3",null,"Gemini 메모"),$("p",null,"“"+it.judge_note+"”"));why.append(y);
+const pr=$("details","pr");pr.append($("summary",null,"엔진에 준 지시문 전체 보기"),$("pre",null,it.prompt));
+d.append(why,pr);return d}
+
+function cutView(id){
+const it=BY[id],idx=ORDER.indexOf(it);S.last=id;save();
+const w=$("div","cut"),tbS=$("div"),main=$("main","cmain"),aft=$("div"),barS=$("div","bar");
+const ti=$("div","ctitle"),h=$("h2",null,"컷 "+it.cut+" · "+it.menu);h.tabIndex=-1;h.dataset.h=1;ti.append(h,$("p","mo","지시 동작: "+it.motion));
+const media=buildMedia(it);
+repaint=(focusNext)=>{const open=isOpen(id);
+tbS.replaceChildren(topbar(idx));
+h.replaceChildren(document.createTextNode("컷 "+it.cut+" · "+it.menu));if(open&&fresh!==id)h.append($("span","rv","다시 보는 중"));
+aft.replaceChildren(open?afterEl(it):document.createDocumentFragment());
+barS.replaceChildren(open?revealBar(it):decideBar(it));
+if(focusNext){const n=barS.querySelector(".next");if(n)n.focus({preventScroll:true})}};
+main.append(ti,media,aft);w.append(tbS,main,barS);
+repaint();
+if(!isOpen(id))wdId=null;
+return w}
+
+/* 요약 */
+function summaryView(){
+const w=$("main","sum");
+const hd=$("div","sumh"),h=$("h1",null,"9컷 요약");h.tabIndex=-1;h.dataset.h=1;
+hd.append(h,btn(null,"← 컷으로 돌아가기",()=>goCut(S.last&&BY[S.last]?S.last:ORDER[0].id)));
+const open=ITEMS.filter(i=>isOpen(i.id)),full=S.all||open.length===9;
+const dN=open.filter(i=>i.human==="defect"),nN=open.filter(i=>i.human!=="defect");
+const mine=open.filter(i=>{const a=S.a[i.id];return a&&(a.v==="defect"||a.v==="no_defect")}),same=mine.filter(i=>S.a[i.id].v===i.human);
+const amb=open.filter(i=>S.a[i.id]&&S.a[i.id].v==="ambiguous").length,skp=open.filter(i=>S.a[i.id]&&S.a[i.id].v==="skip").length;
+const scope=$("p","scope",full?"9컷 전체 기준":"지금까지 연 "+open.length+"컷 기준");
+const mets=$("div","mets");
+const m1=$("div","met");m1.append($("span","chip gem","Gemini 판정"),$("p","big",open.length?"결함 "+dN.length+"컷 중 "+dN.filter(i=>res(i)==="ok").length+"컷 찾음, 정상 "+nN.length+"컷 중 "+nN.filter(i=>res(i)==="ok").length+"컷 맞힘":"–"));
+const m2=$("div","met");m2.append($("span","chip me","내 답"),$("p","big",mine.length?"박준혁 정답과 같은 컷 "+same.length+"/"+mine.length:"–"));if(amb||skp)m2.append($("p","small","애매 "+amb+"컷, 건너뜀 "+skp+"컷은 뺌"));
+mets.append(m1,m2);
+const missed=open.filter(i=>res(i)==="miss"),blurN=missed.filter(i=>i.kind==="blur").length,varN=missed.filter(i=>i.photo_source==="variant"&&i.human==="defect").length;
+const diffN=open.filter(i=>{const a=S.a[i.id];return a&&(a.v==="defect"||a.v==="no_defect")&&a.v!==i.human}).length,todoN=ITEMS.length-open.length;
+const fb=$("div","filt");fb.setAttribute("role","group");fb.setAttribute("aria-label","보기 걸러내기");
+const FL=[["all","전체 9"],["miss","Gemini가 놓친 "+missed.length],["diff","내 답이 정답과 다름 "+diffN],["todo","안 푼 컷 "+todoN]];
+const fbs={};FL.forEach(([k,t])=>{const b=btn(null,t,()=>{filt=(filt===k?"all":k);upd()});fbs[k]=b;fb.append(b)});
+let gb=null;const gbs={};
+if(missed.length){gb=$("div","grps");gb.append($("h2",null,"Gemini가 놓친 컷의 공통점 (박준혁이 직접 묶음)"));
+[["blur","흐린 띠(후처리가 위아래에 덧댐) "+blurN+"컷",blurN],["var","AI로 각도를 바꾼 엔진 입력에서 이미 생긴 변화 "+varN+"컷",varN]].forEach(([k,t,n])=>{const g=btn("grp");g.append($("span",null,t),(()=>{const bk=$("span","bk"),i=$("i");i.style.width=(n/missed.length*100)+"%";bk.append(i);return bk})());g.onclick=()=>{filt=(filt===k?"all":k);upd()};gbs[k]=g;gb.append(g)})}
+const shown=$("p","shown");shown.setAttribute("aria-live","polite");
+const tbl=$("table","st"),th=$("thead"),hr=$("tr");[["컷",""],["내 답","h-me"],["박준혁 정답","h-jun"],["Gemini 판정","h-gem"],["결과",""]].forEach(([t,c])=>{const x=$("th",c,t);x.scope="col";hr.append(x)});th.append(hr);const tb=$("tbody");tbl.append(th,tb);
+function pass(it){const o=isOpen(it.id),a=S.a[it.id];switch(filt){case"all":return true;case"miss":return o&&res(it)==="miss";case"diff":return o&&a&&(a.v==="defect"||a.v==="no_defect")&&a.v!==it.human;case"todo":return !o;case"blur":return o&&res(it)==="miss"&&it.kind==="blur";case"var":return o&&res(it)==="miss"&&it.photo_source==="variant"&&it.human==="defect"}return true}
+function rowEl(it){const o=isOpen(it.id),a=S.a[it.id],tr=$("tr",o?"op":""),g=res(it);
+const td=(c,l)=>{const x=$("td",c);if(l)x.dataset.l=l;tr.append(x);return x};
+const c1=td("c-cut"),im=document.createElement("img");im.src=it.frames[2];im.alt="";c1.append(im,btn("cutlink","컷 "+it.cut+" · "+it.menu,e=>{e.stopPropagation();goCut(it.id,true)}));
+const c2=td("c-me","내 답");
+if(!o){c2.append(btn("mini","풀기",e=>{e.stopPropagation();goCut(it.id,true)}),btn("mini","건너뛰고 보기",e=>{e.stopPropagation();S.a[it.id]={v:"skip",k:null};save();upd(true)}))}
+else c2.append(a?valEl(a.v):$("span","val","–"));
+const c3=td("c-jun","박준혁 정답"),c4=td("c-gem","Gemini 판정"),c5=td("c-res","");
+if(!o){[c3,c4,c5].forEach((c,i)=>c.append($("span","mask",i===2?"풀기 전":"풀기 전")))}
+else{c3.append(valEl(it.human==="defect"?"defect":"no_defect",it.kind));c4.append(valEl(jv(it)));const r=$("span","rs "+RES[g][3]);r.append(document.createTextNode(RES[g][0]+" "+RES[g][2]));if(g==="ok"&&it.human==="defect")r.append($("small",null,"결함을 찾음"));c5.append(r)}
+if(o)tr.onclick=()=>goCut(it.id,true);
+return tr}
+function upd(rebuild){if(rebuild){render();return}
+Object.keys(fbs).forEach(k=>fbs[k].setAttribute("aria-pressed",String(filt===k)));Object.keys(gbs).forEach(k=>gbs[k].setAttribute("aria-pressed",String(filt===k)));
+const rows=BYCUT.filter(pass);tb.replaceChildren(...rows.map(rowEl));shown.textContent=rows.length+"컷 표시 중 (전체 9)"}
+const foot=$("div","foot");foot.append(btn(null,"처음부터 다시",()=>{S={a:{},all:false,speed:S.speed,b3:null,last:null};save();fresh=null;wdId=null;filt="all";go("intro")}),btn(null,"결함 기준 보기",openCriteria));
+w.append(hd,scope,mets,fb);if(gb)w.append(gb);w.append(shown,tbl,foot);upd();return w}
+
+/* 그리기 */
+function render(){
+cleanups.splice(0).forEach(f=>{try{f()}catch(e){}});closeDlg(true);clearTimeout(wdT);repaint=null;mainStage=null;
+const r=route();const moved=r.key!==lastKey;
+if(moved){fresh=null;wdId=null;if(lastKey!==null)window.scrollTo(0,0)}
+if(r.v==="cut"&&moved&&lastKey!=="summary"&&!/^cut-/.test(lastKey||"")&&lastKey!==null){}
+const first=lastKey===null;lastKey=r.key;
+root.replaceChildren(r.v==="intro"?introView():r.v==="summary"?summaryView():cutView(r.id));
+if(moved&&!first){const h=root.querySelector("[data-h]");if(h)h.focus({preventScroll:true})}}
+addEventListener("hashchange",render);
+mq.addEventListener("change",render);
+
+/* 키보드 */
+document.addEventListener("keydown",e=>{
+if(e.ctrlKey||e.metaKey||e.altKey)return;
+const t=e.target,tag=t&&t.tagName,k=e.key;
+if(/^(INPUT|TEXTAREA|SELECT)$/.test(tag))return;
+if(dlg){if(k==="Escape"){closeDlg();e.preventDefault();return}
+if(k==="Tab"&&dlg.trap){const f=[...dlg.trap.querySelectorAll("button,summary,[tabindex]")].filter(x=>!x.disabled&&!x.hidden);if(f.length){const a=f[0],z=f[f.length-1];if(e.shiftKey&&document.activeElement===a){z.focus();e.preventDefault()}else if(!e.shiftKey&&document.activeElement===z){a.focus();e.preventDefault()}}return}
+if(dlg.key)dlg.key(e);if(k==="?")e.preventDefault();return}
+if(k==="?"){openHelp();e.preventDefault();return}
+const onBtn=/^(BUTTON|A|SUMMARY)$/.test(tag);
+if((k==="Enter"||k===" ")&&onBtn)return;
+const r=route();if(r.v!=="cut")return;
+const id=r.id,it=BY[id],open=isOpen(id),idx=ORDER.indexOf(it);
+if(!open&&(k==="1"||k==="2"||k==="3"||k==="4")){answer(id,k==="1"?"defect":k==="2"?"no_defect":k==="3"?"ambiguous":"skip");e.preventDefault();return}
+if(k===" "){if(mainStage)mainStage.toggle();e.preventDefault();return}
+if(k==="s"||k==="S"){cycleSpeed();return}
+if(k==="ArrowLeft"){if(tag==="VIDEO")return;if(idx>0)goCut(ORDER[idx-1].id);e.preventDefault();return}
+if(k==="ArrowRight"){if(tag==="VIDEO")return;if(open){fromSum=false;go(nextOf(id))}e.preventDefault();return}
+if(k==="Enter"){if(open&&Date.now()-revealAt>400){fromSum=false;go(nextOf(id))}return}
+if(k==="f"||k==="F"){if(mainStage)mainStage.openLb();return}
+if((k==="c"||k==="C")&&!e.repeat){if(mainStage)mainStage.flick(true);return}
+if(k==="l"||k==="L"){go("summary");return}
+});
+document.addEventListener("keyup",e=>{if((e.key==="c"||e.key==="C")&&mainStage)mainStage.flick(false)});
+addEventListener("blur",()=>{if(mainStage)mainStage.flick(false)});
+render();
+</script>
 </body>
 </html>
