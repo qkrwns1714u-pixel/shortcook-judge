@@ -322,7 +322,7 @@ function introView(){
 const w=$("main","intro");
 const h=$("h1",null,"AI 영상 컷 판정 체험");h.tabIndex=-1;h.dataset.h=1;
 const steps=$("div","steps");[["1","영상 보기"],["2","결함·정상·애매 고르기"],["3","두 판정 열림"]].forEach(([n,t],i)=>{if(i)steps.append($("span","muted","→"));const s=$("div","s");s.append($("span","n",n),$("span",null,t));steps.append(s)});
-const lg=$("div","legend");[["me","내 답","방금 고른 답"],["jun","박준혁 정답","박준혁이 원본·프레임·영상을 보고 단 답"],["gem","Gemini 판정","같은 컷을 자동 판정한 LLM"]].forEach(([c,n,t])=>{const d=$("div");d.append($("span","chip "+c,n),$("span",null,t));lg.append(d)});
+const lg=$("div","legend");[["me","내 답","방금 고른 답"],["jun","박준혁 정답","박준혁이 원본·프레임·영상을 보고 단 답"],["gem","Gemini 판정","같은 컷을 자동 판정한 LLM(11/07 수정 판)"]].forEach(([c,n,t])=>{const d=$("div");d.append($("span","chip "+c,n),$("span",null,t));lg.append(d)});
 const go1=btn("go","첫 컷 보기",()=>goCut(ORDER[0].id));
 const l2=btn("link","결과만 보기",()=>{S.all=true;save();go("summary")});
 w.append(h,$("p","lead","음식점 홍보 영상에서 AI가 만든 컷 9개입니다. 결함이 있는지 먼저 고르면 박준혁 정답과 Gemini 판정이 열립니다."),steps,lg,go1,l2,$("p","small","컷당 10~20초 · 고른 답은 바뀌지 않고, 이 탭에만 잠시 남을 뿐 어디로도 보내지 않습니다 · 키보드 1 2 3"),$("p","small","만든 사람: 박준혁"));
