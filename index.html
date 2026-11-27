@@ -339,7 +339,7 @@ if(!mob()){bar.append(btn("tb","요약",()=>go("summary")),btn("tb","기준",ope
 else{const m=btn("tb","⋯");m.setAttribute("aria-label","메뉴");m.setAttribute("aria-haspopup","true");m.onclick=e=>{e.stopPropagation();if(dlg&&dlg.menu){closeDlg();return}const mn=$("div","menu");[["요약",()=>go("summary")],["결함 기준",openCriteria],["키보드",openHelp]].forEach(([t,f])=>mn.append(btn(null,t,()=>{closeDlg(true);f()})));const out=ev=>{if(!mn.contains(ev.target))closeDlg()};setTimeout(()=>document.addEventListener("click",out),0);showDlg(mn,mn.firstChild,{menu:true,trap:mn,off:()=>document.removeEventListener("click",out)});bar.append(mn)};bar.append(m)}
 return bar}
 
-function answer(id,v,k){if(isOpen(id))return;S.a[id]={v,k:k||null};fresh=id;revealAt=Date.now();wdId=(v==="skip")?null:id;clearTimeout(wdT);if(wdId){wdT=setTimeout(()=>{wdId=null;if(repaint)repaint()},3000)}
+function answer(id,v,k){if(isOpen(id))return;S.a[id]={v,k:k||null};fresh=id;revealAt=Date.now();wdId=null;clearTimeout(wdT);if(wdId){wdT=setTimeout(()=>{wdId=null;if(repaint)repaint()},3000)}
 if(Object.keys(S.a).length===3&&!S.b3)S.b3=id;save();if(repaint)repaint(true);
 const it=BY[id];live("내 답 "+VAL[v][1]+". 박준혁 정답 "+VAL[it.human][1]+". Gemini 판정 "+VAL[jv(it)][1]+". "+RES[res(it)][1]+".")}
 
