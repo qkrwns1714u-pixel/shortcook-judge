@@ -123,8 +123,8 @@ ORDER.forEach((it,i)=>{
   c3.append(vb,kd,out);r.append(c0,c1,c2,c3);rows.append(r);els[it.id]={r,bt,kd,out};
 });
 function show(id){const it=ITEMS.find(x=>x.id===id);const e=els[id];const o=e.out;o.textContent="";
-  const dl=$("dl","res");const add=(k,v)=>{dl.append($("dt",null,k),$("dd",VC[v],VL[v]));};add("제 정답",it.human);add("판정 모델",jk(it));o.append(dl);
-  const ok=jk(it)===it.human;o.append($("div","flag "+(ok?"p":"d"),ok?"판정 모델이 맞힘":(it.human==="defect"?"판정 모델이 결함을 놓침":"판정 모델이 정상 컷을 떨어뜨림")));
+  const dl=$("dl","res");const add=(k,v)=>{dl.append($("dt",null,k),$("dd",VC[v],VL[v]));};add("내 선택",state[id]);add("제 정답",it.human);add("판정 모델",jk(it));o.append(dl);
+  const ok=jk(it)===it.human;o.append($("div","flag "+(ok?"p":"d"),"제 정답 기준: "+(ok?"판정 모델이 맞힘":(it.human==="defect"?"판정 모델이 결함을 놓침":"판정 모델이 정상 컷을 떨어뜨림"))));if(state[id]!=="ambiguous")o.append($("div","legend",state[id]===it.human?"내 선택은 제 정답과 같습니다.":"내 선택은 제 정답과 다릅니다."));
   if(it.human==="defect"&&it.kind){const mk=kinds[id];o.append($("div","legend","정답 종류: "+KIND[it.kind]+(mk?(mk===it.kind?" · 내 선택과 같음":" · 내 선택: "+KIND[mk]):"")));}
   const d=$("details","why");d.append($("summary",null,"이유와 판정 모델 메모"));if(it.human_why)d.append($("p",null,"제 정답: "+it.human_why));d.append($("p",null,"판정 모델: "+it.judge_note));const pr=$("p","mono",it.prompt);d.append(pr);o.append(d);o.hidden=false;}
 function pick(id,k){if(state[id])return;state[id]=k;const e=els[id];Object.entries(e.bt).forEach(([kk,b])=>{b.setAttribute("aria-pressed",String(kk===k));b.disabled=true;});e.r.classList.add("done");if(k==="defect"){e.kd.hidden=false;e.kd.querySelector(".reveal").focus();}else{opened[id]=true;show(id);}tally();apply();}
